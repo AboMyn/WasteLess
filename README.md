@@ -1,11 +1,41 @@
+# Wasteless
 
-  # Wasteless Web App UI Design
+Wasteless is a web platform that helps reduce food waste by allowing users to buy food products that are close to expiration at discounted prices.
 
-  This is a code bundle for Wasteless Web App UI Design. The original project is available at https://www.figma.com/design/axgq1RTGDDEjxEM7iUmxQ9/Wasteless-Web-App-UI-Design.
+## Problem
 
-  ## Running the code
+Stores often throw away unsold food nearing expiration,leading to financial loss and environmental damage.
 
-  Run `npm i` to install the dependencies.
+## Solution
 
-  Run `npm run dev` to start the development server.
-  
+Wasteless provides a marketplace where users can purchase these products at a lower price before they expire.
+
+## Features
+
+* Product listing with discounts
+* Countdown timer for expiration
+* Store-based browsing
+* Map view of nearby stores
+
+## Installation
+
+```bash
+npm install
+npm run dev
+```
+
+## Usage
+
+Open the app in your browser at:
+http://localhost:5173/
+
+## Tech Stack
+
+* React
+* Vite
+* Tailwind CSS
+
+## Status
+
+This project is currently in alpha stage and focuses on UI and core functionality.
+
