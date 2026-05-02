@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Store, Package, Clock } from 'lucide-react';
-import { getStoredProducts } from '../utils/productStorage';
+import { getStoredProducts, saveStoredProducts } from '../utils/productStorage';
 import { Button } from '../components/ui/button';
 import { CountdownTimer } from '../components/CountdownTimer';
 import { DiscountBadge } from '../components/DiscountBadge';
@@ -9,37 +9,34 @@ import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { calculateDistance } from '../utils/distance';
-import { reserveProduct } from '../utils/productStorage';
+import { api } from '../lib/api';
+
 export function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const storedProducts = getStoredProducts();
-  const product = storedProducts.find((p: any) => p.id === id);
+  const product = storedProducts.find((p: { id: string }) => p.id === id);
   const [distance, setDistance] = useState<number | null>(null);
+  const [reserving, setReserving] = useState(false);
 
   useEffect(() => {
     if (!product) return;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const userLat = position.coords.latitude;
-        const userLng = position.coords.longitude;
-
-        const calculatedDistance = calculateDistance(
-          userLat,
-          userLng,
-          product.lat,
-          product.lng
+        setDistance(
+          calculateDistance(
+            position.coords.latitude,
+            position.coords.longitude,
+            product.lat,
+            product.lng,
+          ),
         );
-
-        setDistance(calculatedDistance);
       },
-      () => {
-        setDistance(null);
-      }
+      () => setDistance(null),
     );
   }, [product]);
-  
+
   if (!product) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -53,31 +50,38 @@ export function ProductDetails() {
     );
   }
 
-  const handleReserve = () => {
-      const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+  const handleReserve = async () => {
+    if (product.quantity <= 0) {
+      toast.error('This product is out of stock');
+      return;
+    }
 
-      const newOrder = {
-        id: Date.now().toString(),
-        product,
-        reservedAt: new Date().toISOString(),
-        status: 'active',
-      };
+    setReserving(true);
+    try {
+      const { product: updated } = await api.products.reserve(product.id);
 
-      localStorage.setItem('orders', JSON.stringify([newOrder, ...existingOrders]));
+      // Sync quantity in localStorage
+      const current = getStoredProducts();
+      saveStoredProducts(
+        current.map((p: { id: string }) =>
+          p.id === product.id ? { ...p, quantity: updated.quantity } : p,
+        ),
+      );
 
-      toast.success('Item reserved successfully!', {
-        description: `${product.name} has been added to your reservations. Pick it up before it expires!`,
+      toast.success('Reserved successfully', {
+        description: `${product.name} added to your orders`,
       });
-
-      setTimeout(() => {
-        navigate('/profile');
-      }, 1000);
-    };
+      setTimeout(() => navigate('/profile'), 1000);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reserve');
+    } finally {
+      setReserving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
         <Link to="/marketplace">
           <Button variant="ghost" className="gap-2 mb-6">
             <ArrowLeft className="w-4 h-4" />
@@ -114,19 +118,15 @@ export function ProductDetails() {
             transition={{ duration: 0.5 }}
             className="space-y-6"
           >
-            {/* Category Badge */}
             <div className="inline-flex items-center px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
               {product.category}
             </div>
 
-            {/* Product Name */}
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
                 {product.name}
               </h1>
-              <p className="text-lg text-gray-600">
-                {product.description}
-              </p>
+              <p className="text-lg text-gray-600">{product.description}</p>
             </div>
 
             {/* Price */}
@@ -140,7 +140,8 @@ export function ProductDetails() {
                 </span>
               </div>
               <p className="text-sm text-green-600 font-medium">
-                Save {(product.originalPrice - product.discountedPrice).toLocaleString()} ₸ ({product.discount}% off)
+                Save {(product.originalPrice - product.discountedPrice).toLocaleString()} ₸ (
+                {product.discount}% off)
               </p>
             </div>
 
@@ -191,40 +192,12 @@ export function ProductDetails() {
             </div>
 
             <Button
-                onClick={() => {
-                  const reservedProduct = reserveProduct(product.id);
-
-                  if (!reservedProduct || reservedProduct.quantity < 0) {
-                    toast.error('This product is out of stock');
-                    return;
-                  }
-
-                  const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-
-                  const newOrder = {
-                    id: Date.now().toString(),
-                    product: reservedProduct,
-                    reservedAt: new Date().toISOString(),
-                    status: 'active',
-                  };
-
-                  localStorage.setItem(
-                    'orders',
-                    JSON.stringify([newOrder, ...existingOrders])
-                  );
-
-                  toast.success('Reserved successfully', {
-                    description: `${product.name} added to your orders`,
-                  });
-
-                  setTimeout(() => {
-                    navigate('/profile');
-                  }, 1000);
-                }}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                Reserve now
-              </Button>
+              onClick={handleReserve}
+              disabled={reserving || product.quantity <= 0}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-60"
+            >
+              {reserving ? 'Reserving…' : product.quantity <= 0 ? 'Out of stock' : 'Reserve now'}
+            </Button>
             <p className="text-sm text-gray-600 text-center">
               By reserving, you agree to pick up the item before expiration
             </p>
@@ -233,14 +206,12 @@ export function ProductDetails() {
 
         {/* Suggestions */}
         <div className="mt-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Similar deals nearby
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Similar deals nearby</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {storedProducts
-              .filter((p: any) => p.id !== product.id && p.category === product.category)
+              .filter((p: { id: string; category: string }) => p.id !== product.id && p.category === product.category)
               .slice(0, 4)
-              .map((similarProduct: any) => (
+              .map((similarProduct: { id: string; name: string; image: string; discount: number; discountedPrice: number; originalPrice: number }) => (
                 <Link key={similarProduct.id} to={`/product/${similarProduct.id}`}>
                   <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-border group">
                     <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">

@@ -2,40 +2,34 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Leaf } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '../lib/api';
+
 export default function Login() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
-
+  const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    if (!savedUser) {
-      toast.error('No account found. Please register');
-      return;
+    setLoading(true);
+    try {
+      const { token, user } = await api.auth.login(email.trim().toLowerCase(), password);
+      localStorage.setItem('token', token);
+      localStorage.setItem('isAuth', 'true');
+      localStorage.setItem('user', JSON.stringify(user));
+      toast.success('Welcome back');
+      setTimeout(() => navigate('/'), 800);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
     }
-
-    if (
-      savedUser.email !== email.trim().toLowerCase() ||
-      savedUser.password !== password
-    ) {
-      toast.error('Wrong email or password');
-      return;
-    }
-
-    localStorage.setItem('isAuth', 'true');
-
-    toast.success('Welcome back');
-
-    setTimeout(() => {
-      navigate('/');
-    }, 800);
   };
 
   return (
@@ -57,6 +51,8 @@ export default function Login() {
           className="w-full border rounded-xl px-4 py-3 mb-3 outline-none focus:ring-2 focus:ring-green-500"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+          disabled={loading}
         />
 
         <input
@@ -65,13 +61,16 @@ export default function Login() {
           className="w-full border rounded-xl px-4 py-3 mb-5 outline-none focus:ring-2 focus:ring-green-500"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+          disabled={loading}
         />
 
         <button
           onClick={handleLogin}
-          className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700"
+          disabled={loading}
+          className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
-          Login
+          {loading ? 'Logging in…' : 'Login'}
         </button>
 
         <p className="text-center text-sm text-gray-500 mt-5">

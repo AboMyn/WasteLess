@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Vite cache
+.vite/
+
+# Server data (contains user data — never commit)
+server/data/users.json
+server/data/orders.json
+server/data/products.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -47,6 +47,8 @@ export function Navigation() {
             <button
               onClick={() => {
                 localStorage.removeItem('isAuth');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
                 window.location.href = '/login';
               }}
               className="ml-2 text-red-500 font-medium hover:text-red-600 px-3"
@@ -73,10 +75,10 @@ export function Navigation() {
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 const Icon = item.icon;
-                
+
                 return (
-                  <Link 
-                    key={item.path} 
+                  <Link
+                    key={item.path}
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -90,6 +92,17 @@ export function Navigation() {
                   </Link>
                 );
               })}
+              <button
+                onClick={() => {
+                  localStorage.removeItem('isAuth');
+                  localStorage.removeItem('token');
+                  localStorage.removeItem('user');
+                  window.location.href = '/login';
+                }}
+                className="text-left text-red-500 font-medium hover:text-red-600 px-3 py-2"
+              >
+                Logout
+              </button>
             </div>
           </div>
         )}

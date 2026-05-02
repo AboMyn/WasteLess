@@ -2,67 +2,58 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Leaf } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '../lib/api';
+
 export default function Register() {
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!name.trim() || !email.trim() || !password.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
-
     if (name.trim().length < 2) {
       toast.error('Name must be at least 2 characters');
       return;
     }
     if (!/^[A-Za-zА-Яа-яЁё\s]+$/.test(name.trim())) {
-                  toast.error('Name can contain only letters');
-                  return;
-                }
-
+      toast.error('Name can contain only letters');
+      return;
+    }
     if (!emailRegex.test(email)) {
       toast.error('Invalid email address');
       return;
     }
-
     if (password.length < 8) {
       toast.error('Password must be at least 8 characters');
       return;
     }
-
     if (!/[A-Z]/.test(password)) {
       toast.error('Password must contain an uppercase letter');
       return;
     }
-
     if (!/[0-9]/.test(password)) {
       toast.error('Password must contain a number');
       return;
     }
 
-    const user = {
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      password,
-      memberSince: new Date().toLocaleDateString('en-US', {
-        month: 'long',
-        year: 'numeric',
-      }),
-    };
-
-    localStorage.setItem('user', JSON.stringify(user));
-
-    toast.success('Account created successfully');
-
-    setTimeout(() => {
-      navigate('/login');
-    }, 1000);
+    setLoading(true);
+    try {
+      await api.auth.register(name.trim(), email.trim().toLowerCase(), password);
+      toast.success('Account created successfully');
+      setTimeout(() => navigate('/login'), 1000);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,6 +75,7 @@ export default function Register() {
           className="w-full border rounded-xl px-4 py-3 mb-3 outline-none focus:ring-2 focus:ring-green-500"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          disabled={loading}
         />
 
         <input
@@ -92,6 +84,7 @@ export default function Register() {
           className="w-full border rounded-xl px-4 py-3 mb-3 outline-none focus:ring-2 focus:ring-green-500"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
         />
 
         <input
@@ -100,13 +93,16 @@ export default function Register() {
           className="w-full border rounded-xl px-4 py-3 mb-5 outline-none focus:ring-2 focus:ring-green-500"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+          disabled={loading}
         />
 
         <button
           onClick={handleRegister}
-          className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700"
+          disabled={loading}
+          className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
-          Register
+          {loading ? 'Creating account…' : 'Register'}
         </button>
 
         <p className="text-center text-sm text-gray-500 mt-5">
