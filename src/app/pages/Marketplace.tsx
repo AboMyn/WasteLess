@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react';
+import type { Product } from '../data/products';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
-import { products, categories } from '../data/products';
+import { categories } from '../data/products';
 import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { calculateDistance } from '../utils/distance';
+import { useSearchParams } from 'react-router-dom';
 import {
   Select,
   SelectContent,
@@ -12,16 +15,52 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { Slider } from '../components/ui/slider';
+import { getStoredProducts } from '../utils/productStorage';
+
 
 export function Marketplace() {
+  const [searchParams] = useSearchParams();
+  const radiusParam = searchParams.get('radius');
+const discountParam = searchParams.get('discount');
+const sortParam = searchParams.get('sort');
+  const storedProducts = getStoredProducts();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [maxDistance, setMaxDistance] = useState(5);
-  const [maxPrice, setMaxPrice] = useState(20);
+  const [maxDistance, setMaxDistance] = useState(30);
+  const [maxPrice, setMaxPrice] = useState(10000);
   const [showFilters, setShowFilters] = useState(false);
+  const [productsWithDistance, setProductsWithDistance] = useState<Product[]>(getStoredProducts());
+  const [locationAllowed, setLocationAllowed] = useState(false);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+
+        const updatedProducts = storedProducts.map((product: Product) => ({
+          ...product,
+          distance: calculateDistance(
+            userLat,
+            userLng,
+            product.lat,
+            product.lng
+          ),
+        }));
+
+        setProductsWithDistance(updatedProducts);
+        setLocationAllowed(true);
+      },
+      () => {
+        // если пользователь запретил геолокацию
+        setProductsWithDistance(storedProducts);
+        setLocationAllowed(false);
+      }
+    );
+  }, []);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    return productsWithDistance.filter((product: Product) => {
       // Search filter
       if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
           !product.store.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -33,19 +72,39 @@ export function Marketplace() {
         return false;
       }
 
-      // Distance filter
-      if (product.distance > maxDistance) {
+      if (
+        locationAllowed &&
+        product.distance !== undefined &&
+        product.distance > maxDistance
+      ) {
         return false;
       }
-
       // Price filter
       if (product.discountedPrice > maxPrice) {
+        return false;
+      }
+      if (discountParam && product.discount < Number(discountParam)) {
+        return false;
+      }
+      if (
+        radiusParam &&
+        product.distance !== undefined &&
+        product.distance > Number(radiusParam)
+      ) {
         return false;
       }
 
       return true;
     });
-  }, [searchQuery, selectedCategory, maxDistance, maxPrice]);
+  }, [productsWithDistance, searchQuery, selectedCategory, maxDistance, maxPrice, locationAllowed]);
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (sortParam === 'nearest') {
+      return (a.distance ?? 9999) - (b.distance ?? 9999);
+    }
+
+    return 0;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -120,7 +179,7 @@ export function Marketplace() {
                     value={[maxDistance]}
                     onValueChange={(values) => setMaxDistance(values[0])}
                     min={0.5}
-                    max={10}
+                    max={30}
                     step={0.5}
                     className="w-full"
                   />
@@ -130,14 +189,14 @@ export function Marketplace() {
               {/* Price Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Max Price: ${maxPrice}
+                  Max Price: {maxPrice} ₸
                 </label>
                 <div className="pt-2">
                   <Slider
                     value={[maxPrice]}
                     onValueChange={(values) => setMaxPrice(values[0])}
                     min={1}
-                    max={30}
+                    max={10000}
                     step={1}
                     className="w-full"
                   />
@@ -150,7 +209,7 @@ export function Marketplace() {
         {/* Products Grid */}
         {filteredProducts.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
+            {sortedProducts.map((product: Product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
@@ -169,7 +228,7 @@ export function Marketplace() {
                   setSearchQuery('');
                   setSelectedCategory('All Categories');
                   setMaxDistance(5);
-                  setMaxPrice(20);
+                  setMaxPrice(3000);
                 }}
                 variant="outline"
               >

@@ -10,7 +10,7 @@ export function CountdownTimer({ expiresAt, size = 'md' }: CountdownTimerProps) 
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
   function calculateTimeLeft() {
-    const difference = expiresAt.getTime() - Date.now();
+    const difference = new Date(expiresAt).getTime() - new Date().getTime();
     
     if (difference <= 0) {
       return { hours: 0, minutes: 0, seconds: 0, expired: true };

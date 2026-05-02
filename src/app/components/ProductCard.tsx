@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import { Product } from '../data/products';
 import { CountdownTimer } from './CountdownTimer';
@@ -49,17 +49,22 @@ export function ProductCard({ product }: ProductCardProps) {
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4" />
               <span>{product.store}</span>
-              <span className="text-gray-300">•</span>
-              <span>{product.distance} km</span>
+
+              {product.distance !== undefined && (
+                <>
+                  <span className="text-gray-300">•</span>
+                  <span>{product.distance.toFixed(1)} km</span>
+                </>
+              )}
             </div>
 
             {/* Price */}
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-semibold text-gray-900">
-                ${product.discountedPrice.toFixed(2)}
+                {product.discountedPrice} ₸
               </span>
               <span className="text-sm text-muted-foreground line-through">
-                ${product.originalPrice.toFixed(2)}
+                {product.originalPrice} ₸
               </span>
             </div>
 

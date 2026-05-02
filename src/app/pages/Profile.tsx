@@ -5,44 +5,54 @@ import { products } from '../data/products';
 import { motion } from 'motion/react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { DiscountBadge } from '../components/DiscountBadge';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
-// Mock user data
-const userData = {
-  name: 'Sarah Johnson',
-  email: 'sarah.johnson@email.com',
-  memberSince: 'January 2024',
-  totalSavings: 342.50,
-  itemsSaved: 47,
-  co2Reduced: 23.5,
-};
-
-// Mock order history
-const orderHistory = [
-  {
-    id: '1',
-    product: products[0],
-    reservedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    status: 'completed',
-  },
-  {
-    id: '2',
-    product: products[4],
-    reservedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    status: 'completed',
-  },
-  {
-    id: '3',
-    product: products[2],
-    reservedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
-    status: 'active',
-  },
-];
-
-// Mock saved items
-const savedItems = [products[1], products[5], products[7]];
 
 export function Profile() {
+
+  const [isEditing,setIsEditing] = useState(false)
+  const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+    const [userData, setUserData] = useState({
+      name: savedUser.name || 'User',
+      email: savedUser.email || 'user@email.com',
+      memberSince: savedUser.memberSince || 'January 2024'
+    });
+  const [orderHistory, setOrderHistory] = useState(() => {
+    return JSON.parse(localStorage.getItem('orders') || '[]');
+  });
+  const totalOrderAmount = orderHistory.reduce(
+    (sum: number, order: any) => sum + order.product.discountedPrice,
+    0
+  );
+
+  const totalSavings = orderHistory.reduce(
+      (sum: any, order: any) =>
+        sum + (order.product.originalPrice - order.product.discountedPrice),
+      0
+    );
+    let memberStatus = 'Bronze';
+
+      if (totalSavings >= 5000) {
+        memberStatus = 'Gold';
+      } else if (totalSavings >= 2000) {
+        memberStatus = 'Silver';
+      }
+
+    const itemsSaved = orderHistory.length;
+
+    const co2Reduced = itemsSaved * 0.2;
+
+  const handleDeleteOrder = (id: string) => {
+    const updatedOrders = orderHistory.filter((order: any) => order.id !== id);
+
+    setOrderHistory(updatedOrders);
+    localStorage.setItem('orders', JSON.stringify(updatedOrders));
+  };
+
+  const [formData, setFormData] = useState(userData);
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -67,13 +77,100 @@ export function Profile() {
             </div>
 
             {/* Edit Button */}
-            <Button variant="secondary" className="gap-2">
+            <Button 
+              variant="secondary" 
+              className="gap-2"
+              onClick={() => {
+                setFormData(userData);
+                setIsEditing(true);
+              }}
+            >
               <User className="w-4 h-4" />
               Edit Profile
             </Button>
           </div>
         </motion.div>
+        {isEditing && (
+          <div className="mt-6 bg-white p-6 rounded-xl border">
+            <h2 className="text-lg font-semibold mb-4">Edit Profile</h2>
 
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              className="w-full mb-3 p-2 border rounded"
+            />
+
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              className="w-full mb-3 p-2 border rounded"
+            />
+
+            <button
+              onClick={() => {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                if (!formData.name.trim() || !formData.email.trim()) {
+                  toast.error('Name and email are required');
+                  return;
+                }
+
+                if (formData.name.trim().length < 2) {
+                  toast.error('Name must be at least 2 characters');
+                  return;
+                }
+
+                if (!/^[A-Za-zА-Яа-яЁё\s]+$/.test(formData.name.trim())) {
+                  toast.error('Name can contain only letters');
+                  return;
+                }
+
+                if (!emailRegex.test(formData.email.trim())) {
+                  toast.error('Please enter a valid email address');
+                  return;
+                }
+
+                const updatedUser = {
+                  ...userData,
+                  name: formData.name.trim(),
+                  email: formData.email.trim().toLowerCase(),
+                };
+
+                setUserData(updatedUser);
+
+                const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+                localStorage.setItem(
+                  'user',
+                  JSON.stringify({
+                    ...savedUser,
+                    ...updatedUser,
+                  })
+                );
+
+                toast.success('Profile updated successfully');
+                setIsEditing(false);
+              }}
+              className="bg-green-600 text-white px-4 py-2 rounded mr-2"
+            >
+              Save
+            </button>
+
+            <button
+              onClick={() => setIsEditing(false)}
+              className="border px-4 py-2 rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+       
         {/* Stats Cards */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -88,7 +185,7 @@ export function Profile() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Savings</p>
-                <p className="text-2xl font-bold text-gray-900">${userData.totalSavings}</p>
+                <p className="text-2xl font-bold text-gray-900">{totalSavings.toLocaleString()} ₸</p>
               </div>
             </div>
           </div>
@@ -100,7 +197,7 @@ export function Profile() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Items Saved</p>
-                <p className="text-2xl font-bold text-gray-900">{userData.itemsSaved}</p>
+                <p className="text-2xl font-bold text-gray-900">{itemsSaved}</p>
               </div>
             </div>
           </div>
@@ -112,7 +209,7 @@ export function Profile() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">CO₂ Reduced</p>
-                <p className="text-2xl font-bold text-gray-900">{userData.co2Reduced} kg</p>
+                <p className="text-2xl font-bold text-gray-900">{co2Reduced.toFixed(1)} kg</p>
               </div>
             </div>
           </div>
@@ -124,7 +221,7 @@ export function Profile() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Member Status</p>
-                <p className="text-2xl font-bold text-gray-900">Gold</p>
+                <p className="text-2xl font-bold text-gray-900">{memberStatus}</p>
               </div>
             </div>
           </div>
@@ -142,10 +239,6 @@ export function Profile() {
                 <ShoppingBag className="w-4 h-4" />
                 Order History
               </TabsTrigger>
-              <TabsTrigger value="saved" className="gap-2">
-                <Heart className="w-4 h-4" />
-                Saved Items
-              </TabsTrigger>
             </TabsList>
 
             {/* Order History Tab */}
@@ -156,10 +249,13 @@ export function Profile() {
                   <p className="text-sm text-gray-600 mt-1">
                     Track your past and active reservations
                   </p>
+                  <p className="text-sm font-semibold text-green-700 mt-2">
+                    Total order amount: {totalOrderAmount.toLocaleString()} ₸
+                  </p>
                 </div>
 
                 <div className="divide-y divide-border">
-                  {orderHistory.map((order) => (
+                  {orderHistory.map((order: any) => (
                     <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
                       <div className="flex flex-col sm:flex-row gap-4">
                         {/* Product Image */}
@@ -198,80 +294,45 @@ export function Profile() {
 
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600">
                             <span>
-                              Reserved: {order.reservedAt.toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}
+                              Reserved: {new Date(order.reservedAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
                             </span>
                             <span className="hidden sm:inline text-gray-300">•</span>
                             <span className="font-semibold text-gray-900">
-                              ${order.product.discountedPrice.toFixed(2)}
+                              {order.product.discountedPrice.toLocaleString()} ₸
                             </span>
                             <span className="text-gray-500 line-through">
-                              ${order.product.originalPrice.toFixed(2)}
+                              {order.product.originalPrice.toLocaleString()} ₸
                             </span>
                           </div>
                         </div>
 
-                        {/* Action Button */}
+                        {/* Action Buttons */}
                         {order.status === 'active' && (
-                          <Link to={`/product/${order.product.id}`}>
-                            <Button variant="outline" size="sm">
-                              View Details
+                          <div className="flex items-center gap-2">
+                            
+                            <Link to={`/product/${order.product.id}`}>
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            </Link>
+
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteOrder(order.id)}
+                            >
+                              Cancel
                             </Button>
-                          </Link>
+
+                          </div>
                         )}
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* Saved Items Tab */}
-            <TabsContent value="saved" className="mt-6">
-              <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
-                <div className="p-6 border-b border-border">
-                  <h2 className="text-xl font-semibold text-gray-900">Saved Items</h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Items you've bookmarked for later
-                  </p>
-                </div>
-
-                <div className="p-6">
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {savedItems.map((product) => (
-                      <Link key={product.id} to={`/product/${product.id}`}>
-                        <div className="bg-white rounded-xl overflow-hidden border border-border hover:shadow-md transition-all duration-300 group">
-                          <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-                            <ImageWithFallback
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute top-2 right-2">
-                              <DiscountBadge discount={product.discount} />
-                            </div>
-                          </div>
-                          <div className="p-4">
-                            <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">
-                              {product.name}
-                            </h3>
-                            <p className="text-sm text-gray-600 mb-2">{product.store}</p>
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-lg font-semibold text-gray-900">
-                                ${product.discountedPrice.toFixed(2)}
-                              </span>
-                              <span className="text-sm text-gray-500 line-through">
-                                ${product.originalPrice.toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
                 </div>
               </div>
             </TabsContent>

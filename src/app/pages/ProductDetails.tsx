@@ -1,18 +1,45 @@
-import { useParams, Link, useNavigate } from 'react-router';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Store, Package, Clock } from 'lucide-react';
-import { products } from '../data/products';
+import { getStoredProducts } from '../utils/productStorage';
 import { Button } from '../components/ui/button';
 import { CountdownTimer } from '../components/CountdownTimer';
 import { DiscountBadge } from '../components/DiscountBadge';
 import { motion } from 'motion/react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { toast } from 'sonner';
-
+import { useEffect, useState } from 'react';
+import { calculateDistance } from '../utils/distance';
+import { reserveProduct } from '../utils/productStorage';
 export function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = products.find((p) => p.id === id);
+  const storedProducts = getStoredProducts();
+  const product = storedProducts.find((p: any) => p.id === id);
+  const [distance, setDistance] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (!product) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+
+        const calculatedDistance = calculateDistance(
+          userLat,
+          userLng,
+          product.lat,
+          product.lng
+        );
+
+        setDistance(calculatedDistance);
+      },
+      () => {
+        setDistance(null);
+      }
+    );
+  }, [product]);
+  
   if (!product) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -27,13 +54,25 @@ export function ProductDetails() {
   }
 
   const handleReserve = () => {
-    toast.success('Item reserved successfully!', {
-      description: `${product.name} has been added to your reservations. Pick it up before it expires!`,
-    });
-    setTimeout(() => {
-      navigate('/profile');
-    }, 1500);
-  };
+      const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+
+      const newOrder = {
+        id: Date.now().toString(),
+        product,
+        reservedAt: new Date().toISOString(),
+        status: 'active',
+      };
+
+      localStorage.setItem('orders', JSON.stringify([newOrder, ...existingOrders]));
+
+      toast.success('Item reserved successfully!', {
+        description: `${product.name} has been added to your reservations. Pick it up before it expires!`,
+      });
+
+      setTimeout(() => {
+        navigate('/profile');
+      }, 1000);
+    };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,14 +133,14 @@ export function ProductDetails() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
               <div className="flex items-baseline gap-3 mb-2">
                 <span className="text-4xl font-bold text-gray-900">
-                  ${product.discountedPrice.toFixed(2)}
+                  {product.discountedPrice.toLocaleString()} ₸
                 </span>
                 <span className="text-xl text-gray-500 line-through">
-                  ${product.originalPrice.toFixed(2)}
+                  {product.originalPrice.toLocaleString()} ₸
                 </span>
               </div>
               <p className="text-sm text-green-600 font-medium">
-                Save ${(product.originalPrice - product.discountedPrice).toFixed(2)} ({product.discount}% off)
+                Save {(product.originalPrice - product.discountedPrice).toLocaleString()} ₸ ({product.discount}% off)
               </p>
             </div>
 
@@ -131,7 +170,9 @@ export function ProductDetails() {
                   <h3 className="font-semibold text-gray-900 mb-1">{product.store}</h3>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <MapPin className="w-4 h-4" />
-                    <span>{product.distance} km away</span>
+                    <span>
+                      {distance !== null ? `${distance.toFixed(1)} km away` : 'Loading...'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -149,15 +190,41 @@ export function ProductDetails() {
               </div>
             </div>
 
-            {/* Reserve Button */}
             <Button
-              size="lg"
-              className="w-full bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20"
-              onClick={handleReserve}
-            >
-              Reserve now
-            </Button>
+                onClick={() => {
+                  const reservedProduct = reserveProduct(product.id);
 
+                  if (!reservedProduct || reservedProduct.quantity < 0) {
+                    toast.error('This product is out of stock');
+                    return;
+                  }
+
+                  const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+
+                  const newOrder = {
+                    id: Date.now().toString(),
+                    product: reservedProduct,
+                    reservedAt: new Date().toISOString(),
+                    status: 'active',
+                  };
+
+                  localStorage.setItem(
+                    'orders',
+                    JSON.stringify([newOrder, ...existingOrders])
+                  );
+
+                  toast.success('Reserved successfully', {
+                    description: `${product.name} added to your orders`,
+                  });
+
+                  setTimeout(() => {
+                    navigate('/profile');
+                  }, 1000);
+                }}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Reserve now
+              </Button>
             <p className="text-sm text-gray-600 text-center">
               By reserving, you agree to pick up the item before expiration
             </p>
@@ -170,10 +237,10 @@ export function ProductDetails() {
             Similar deals nearby
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products
-              .filter((p) => p.id !== product.id && p.category === product.category)
+            {storedProducts
+              .filter((p: any) => p.id !== product.id && p.category === product.category)
               .slice(0, 4)
-              .map((similarProduct) => (
+              .map((similarProduct: any) => (
                 <Link key={similarProduct.id} to={`/product/${similarProduct.id}`}>
                   <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-border group">
                     <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
@@ -192,10 +259,10 @@ export function ProductDetails() {
                       </h3>
                       <div className="flex items-baseline gap-2">
                         <span className="text-lg font-semibold text-gray-900">
-                          ${similarProduct.discountedPrice.toFixed(2)}
+                          {similarProduct.discountedPrice.toLocaleString()} ₸
                         </span>
                         <span className="text-sm text-gray-500 line-through">
-                          ${similarProduct.originalPrice.toFixed(2)}
+                          {similarProduct.originalPrice.toLocaleString()} ₸
                         </span>
                       </div>
                     </div>

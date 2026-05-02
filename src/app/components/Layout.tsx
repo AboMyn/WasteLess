@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { Outlet } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { Toaster } from './ui/sonner';
 
@@ -9,7 +9,6 @@ export function Layout() {
       <main>
         <Outlet />
       </main>
-      <Toaster position="top-center" />
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router';
-import { Leaf, MapPin, ShoppingBag, User, Menu } from 'lucide-react';
+import { Link,NavLink, useLocation } from 'react-router-dom';
+import { Leaf, MapPin, ShoppingBag, User, Menu, Home } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState } from 'react';
 
@@ -8,7 +8,7 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { path: '/', label: 'Home', icon: null },
+    { path: '/', label: 'Home', icon: Home },
     { path: '/marketplace', label: 'Marketplace', icon: ShoppingBag },
     { path: '/map', label: 'Map', icon: MapPin },
     { path: '/profile', label: 'Profile', icon: User },
@@ -44,6 +44,15 @@ export function Navigation() {
                 </Link>
               );
             })}
+            <button
+              onClick={() => {
+                localStorage.removeItem('isAuth');
+                window.location.href = '/login';
+              }}
+              className="ml-2 text-red-500 font-medium hover:text-red-600 px-3"
+            >
+              Logout
+            </button>
           </div>
 
           {/* Mobile Menu Button */}

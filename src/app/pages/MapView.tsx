@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { products } from '../data/products';
+import { getStoredProducts } from '../utils/productStorage';
 import { MapPin } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { DiscountBadge } from '../components/DiscountBadge';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
@@ -10,6 +10,7 @@ import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 let L: any;
 
 export function MapView() {
+  const storedProducts = getStoredProducts();
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function MapView() {
     if (!mapReady || !L) return;
 
     // Group products by store location
-    const storeLocations = products.reduce((acc, product) => {
+    const storeLocations = storedProducts.reduce((acc, product) => {
       const key = `${product.lat}-${product.lng}`;
       if (!acc[key]) {
         acc[key] = {
@@ -54,12 +55,12 @@ export function MapView() {
       }
       acc[key].products.push(product);
       return acc;
-    }, {} as Record<string, { lat: number; lng: number; store: string; products: typeof products }>);
+    }, {} as Record<string, { lat: number; lng: number; store: string; products: any[] }>);
 
     const locations = Object.values(storeLocations);
 
     // Initialize map
-    const map = L.map('map').setView([40.7580, -73.9855], 14);
+    const map = L.map('map').setView([43.2389, 76.8897], 12);
 
     // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -113,13 +114,13 @@ export function MapView() {
                 ${product.name}
               </h4>
               <div class="flex items-baseline gap-2 mb-1">
-                <span class="text-sm font-semibold text-gray-900">
-                  $${product.discountedPrice.toFixed(2)}
-                </span>
-                <span class="text-xs text-gray-500 line-through">
-                  $${product.originalPrice.toFixed(2)}
-                </span>
-              </div>
+  <span class="text-sm font-semibold text-gray-900">
+    ${product.discountedPrice.toLocaleString()} ₸
+  </span>
+  <span class="text-xs text-gray-500 line-through">
+    ${product.originalPrice.toLocaleString()} ₸
+  </span>
+</div>
               <p class="text-xs text-gray-600">${product.quantity} left</p>
             </div>
           </div>

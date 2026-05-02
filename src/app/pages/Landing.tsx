@@ -1,294 +1,283 @@
-import { Link } from 'react-router';
-import { ArrowRight, Leaf, MapPin, DollarSign, Timer, Package, Heart } from 'lucide-react';
+import type { Product } from '../data/products';
+import { useEffect, useMemo, useState } from 'react';
+import { calculateDistance } from '../utils/distance';
+import { Link } from 'react-router-dom';
+import { ArrowRight, MapPin, Search, Flame, Clock, Star, Heart, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { products } from '../data/products';
+import { getStoredProducts } from '../utils/productStorage';
 import { ProductCard } from '../components/ProductCard';
 import { motion } from 'motion/react';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 export function Landing() {
-  const featuredProducts = products.slice(0, 4);
+  
+  const storedProducts = getStoredProducts();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [productsWithDistance, setProductsWithDistance] = useState<Product[]>(getStoredProducts());
+    const nearbyStores = new Set(
+    productsWithDistance
+      .filter((product: any) => product.distance !== undefined && product.distance <= 10)
+      .map((product: any) => product.store)
+  ).size;
+  const nearbyProducts = productsWithDistance.filter(
+    (product: Product) =>
+      product.distance !== undefined && product.distance <= 10
+  );
 
-  const steps = [
-    {
-      icon: MapPin,
-      title: 'Find deals near you',
-      description: 'Browse discounted food items from local stores and restaurants',
-    },
-    {
-      icon: Package,
-      title: 'Reserve your items',
-      description: 'Secure your favorite products before they expire',
-    },
-    {
-      icon: Heart,
-      title: 'Save & make impact',
-      description: 'Save money while reducing food waste',
-    },
-  ];
+  useEffect(() => {
+  const storedProducts = getStoredProducts();
 
-  const benefits = [
-    {
-      icon: DollarSign,
-      title: 'Save up to 60%',
-      description: 'Get quality food at amazing discounts',
-      color: 'bg-green-50 text-green-600',
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+
+      const updated = storedProducts.map((product: any) => ({
+        ...product,
+        distance: calculateDistance(userLat, userLng, product.lat, product.lng),
+      }));
+
+      setProductsWithDistance(updated);
     },
-    {
-      icon: Leaf,
-      title: 'Reduce waste',
-      description: 'Help prevent perfectly good food from going to waste',
-      color: 'bg-green-50 text-green-600',
-    },
-    {
-      icon: Timer,
-      title: 'Last-minute deals',
-      description: 'Fresh food at great prices, picked up the same day',
-      color: 'bg-orange-50 text-orange-600',
-    },
-  ];
+    () => {
+      setProductsWithDistance(storedProducts);
+    }
+  );
+}, []);
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+
+    if (!query) return [];
+
+    return productsWithDistance.filter((product: Product) =>
+      product.name.toLowerCase().includes(query)
+    );
+  }, [searchQuery, productsWithDistance]);
+
+  const trendingProducts = productsWithDistance.slice(0, 4);
+  const endingSoonProducts = productsWithDistance.slice(4, 8);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-green-50/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="space-y-8"
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                <Leaf className="w-4 h-4" />
-                <span>Join the fight against food waste</span>
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                Save food.<br />
-                Save money.<br />
-                <span className="text-green-600">Save the planet.</span>
-              </h1>
-
-              <p className="text-lg text-gray-600 max-w-xl">
-                Discover amazing deals on quality food close to expiration. 
-                Help reduce food waste while enjoying delicious meals at unbeatable prices.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/marketplace">
-                  <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-lg shadow-green-600/20">
-                    Find deals near me
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-                <Link to="/map">
-                  <Button size="lg" variant="outline" className="gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Browse on map
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="flex items-center gap-8 pt-4">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">50k+</div>
-                  <div className="text-sm text-gray-600">Meals saved</div>
-                </div>
-                <div className="h-12 w-px bg-gray-200"></div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">200+</div>
-                  <div className="text-sm text-gray-600">Partner stores</div>
-                </div>
-                <div className="h-12 w-px bg-gray-200"></div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600">60%</div>
-                  <div className="text-sm text-gray-600">Avg. savings</div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative hidden lg:block"
-            >
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-                <ImageWithFallback
-                  src="https://images.unsplash.com/photo-1614272527834-e95f090a34c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwd2FzdGUlMjByZWR1Y3Rpb24lMjBzdXN0YWluYWJsZXxlbnwxfHx8fDE3NzU2NzYzMDd8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                  alt="Food waste reduction"
-                  className="w-full h-[500px] object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl p-8 sm:p-12 text-white shadow-xl">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="max-w-3xl"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              How it works
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Start saving food and money in three simple steps
+            <div className="inline-flex items-center gap-2 bg-white/15 px-4 py-2 rounded-full mb-5">
+              <Flame className="w-4 h-4" />
+              <span className="text-sm font-medium">Hot deals near you today</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl font-bold leading-tight mb-4">
+              Find discounted food before it sells out
+            </h1>
+
+            <p className="text-lg text-green-50 mb-7">
+              Fresh products, lower prices, quick reservations — all in one place.
             </p>
-          </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="relative"
-                >
-                  <div className="text-center space-y-4">
-                    <div className="relative inline-flex">
-                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/20">
-                        <Icon className="w-8 h-8 text-white" />
-                      </div>
-                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow">
-                        {index + 1}
-                      </div>
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      {step.title}
-                    </h3>
-                    <p className="text-gray-600">
-                      {step.description}
-                    </p>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-green-300 to-transparent"></div>
-                  )}
-                </motion.div>
-              );
-            })}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link to="/marketplace">
+                <Button size="lg" className="bg-white text-green-700 hover:bg-gray-100 gap-2">
+                  Browse deals
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+
+              <Link to="/map">
+                <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 gap-2">
+                  <MapPin className="w-4 h-4" />
+                  View map
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl p-5 border shadow-sm">
+            <p className="text-sm text-gray-500">Today’s deals</p>
+            <h3 className="text-2xl font-bold">{productsWithDistance.length}</h3>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border shadow-sm">
+            <p className="text-sm text-gray-500">Average discount</p>
+            <h3 className="text-2xl font-bold">
+              {Math.round(
+                productsWithDistance.reduce((sum: number, p: any) => sum + p.discount, 0) /
+                  productsWithDistance.length
+              )}%
+            </h3>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border shadow-sm">
+            <p className="text-sm text-gray-500">Stores within 10 km</p>
+            <h3 className="text-2xl font-bold">{nearbyStores}</h3>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 border shadow-sm">
+            <p className="text-sm text-gray-500">Reserved today</p>
+            <h3 className="text-2xl font-bold">126</h3>
           </div>
         </div>
       </section>
 
-      {/* Benefits */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Why choose Wasteless?
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Everyone wins when we reduce food waste together
-            </p>
-          </motion.div>
+      {/* Search */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white rounded-2xl border shadow-sm p-4">
+          <div className="w-full flex items-center gap-3 border rounded-xl px-4 py-3">
+            <Search className="w-5 h-5 text-gray-400" />
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {benefits.map((benefit, index) => {
-              const Icon = benefit.icon;
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className={`w-12 h-12 ${benefit.color} rounded-xl flex items-center justify-center mb-4`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {benefit.title}
-                  </h3>
-                  <p className="text-gray-600">
-                    {benefit.description}
-                  </p>
-                </motion.div>
-              );
-            })}
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search milk, bread, salad, juice..."
+              className="w-full outline-none bg-transparent"
+            />
+
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="text-gray-400 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Featured Deals */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="flex items-center justify-between mb-12"
-          >
+      {/* Search Results */}
+      {searchQuery && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                Featured deals
-              </h2>
-              <p className="text-lg text-gray-600">
-                Hot deals ending soon
+              <h2 className="text-2xl font-bold">Search results</h2>
+              <p className="text-gray-500">
+                {filteredProducts.length} products found for “{searchQuery}”
               </p>
             </div>
-            <Link to="/marketplace">
-              <Button variant="outline" className="gap-2">
-                View all
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
           </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-green-600 to-green-700">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="space-y-8"
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-white">
-              Ready to start saving?
-            </h2>
-            <p className="text-xl text-green-50">
-              Join thousands of people fighting food waste while saving money
-            </p>
-            <Link to="/marketplace">
-              <Button size="lg" className="bg-white text-green-600 hover:bg-green-50 gap-2 shadow-xl">
-                Browse food deals
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
+          {filteredProducts.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {filteredProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white border rounded-2xl p-10 text-center text-gray-500">
+              No products found
+            </div>
+          )}
+        </section>
+      )}
+
+      {!searchQuery && (
+        <>
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Flame className="w-6 h-6 text-orange-500" />
+                  Trending deals
+                </h2>
+                <p className="text-gray-500">Popular products users are reserving now</p>
+              </div>
+
+              <Link to="/marketplace">
+                <Button variant="outline" className="gap-2">
+                  View all
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {trendingProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </section>
+
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="grid lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 bg-white rounded-3xl border shadow-sm p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      <Clock className="w-6 h-6 text-green-600" />
+                      Ending soon
+                    </h2>
+                    <p className="text-gray-500">Reserve before these deals disappear</p>
+                  </div>
+
+                  <Link to="/marketplace">
+                    <Button variant="ghost">See more</Button>
+                  </Link>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {endingSoonProducts.map((product: Product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-white to-green-50 rounded-3xl border shadow-sm p-6">
+                <h2 className="text-2xl font-bold mb-3">Recommended for you</h2>
+                <p className="text-gray-600 mb-5">
+                  Based on your profile activity, these deals may be interesting.
+                </p>
+
+                <div className="space-y-4">
+                  <Link to="/marketplace?discount=50">
+                    <div className="flex items-start gap-3 bg-white rounded-2xl p-4 border hover:shadow-md hover:-translate-y-0.5 transition cursor-pointer">
+                      <Star className="w-5 h-5 text-yellow-500 mt-1" />
+                      <div>
+                        <h3 className="font-semibold">Best discount today</h3>
+                        <p className="text-sm text-gray-500">Products with 50–60% off</p>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <Link to="/marketplace?sort=nearest&radius=10">
+                    <div className="flex items-start gap-3 bg-white rounded-2xl p-4 border hover:shadow-md hover:-translate-y-0.5 transition cursor-pointer">
+                      <MapPin className="w-5 h-5 text-green-600 mt-1" />
+                      <div>
+                        <h3 className="font-semibold">Near your location</h3>
+                        <p className="text-sm text-gray-500">Show closest products first</p>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <Link to="/profile">
+                    <div className="flex items-start gap-3 bg-white rounded-2xl p-4 border hover:shadow-md hover:-translate-y-0.5 transition cursor-pointer">
+                      <Heart className="w-5 h-5 text-red-500 mt-1" />
+                      <div>
+                        <h3 className="font-semibold">Saved items</h3>
+                        <p className="text-sm text-gray-500">Check products you liked before</p>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+
+                <Link to="/map">
+                  <Button className="w-full mt-6 bg-green-600 hover:bg-green-700">
+                    Find nearby deals
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }
