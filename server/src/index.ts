@@ -13,7 +13,7 @@ const PORT = process.env.PORT ?? 3001;
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://your-vercel-app.vercel.app'
+    'https://waste-less-psi.vercel.app'
   ]
 }));
 app.use(express.json());
