@@ -39,3 +39,9 @@ http://localhost:5173/
 
 This project is currently in alpha stage and focuses on UI and core functionality.
 
+## Students
+- ID: 230103060
+- ID: 230103309
+- ID: 230103140
+- ID: 230103371
+
