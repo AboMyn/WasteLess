@@ -17,6 +17,7 @@ app.use(cors({
     'https://waste-less-psi.vercel.app'
   ]
 }));
+
 app.use(express.json());
 
 app.get('/', (_req, res) => {
