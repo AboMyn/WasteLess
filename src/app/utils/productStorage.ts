@@ -8,7 +8,12 @@ export function getStoredProducts() {
     return products;
   }
 
-  return JSON.parse(saved);
+  const stored = JSON.parse(saved);
+  // Always use fresh expiresAt from module (computed at page load), but keep stored quantities
+  return stored.map((storedProduct: any) => {
+    const fresh = products.find((p) => p.id === storedProduct.id);
+    return fresh ? { ...storedProduct, expiresAt: fresh.expiresAt } : storedProduct;
+  });
 }
 
 export function saveStoredProducts(updatedProducts: any[]) {

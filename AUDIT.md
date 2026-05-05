@@ -1,7 +1,5 @@
 # Repository Audit
 
-## Score: 7/10
-
 ### README Quality
 
 The README exists but lacks detailed explanation of the project,setup instructions,and clear structure.
