@@ -20,6 +20,7 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:4173',
     'https://waste-less-psi.vercel.app',
+    'https://waste-less-deploy.vercel.app',
     ...ALLOWED_ORIGINS,
   ]
 }));
